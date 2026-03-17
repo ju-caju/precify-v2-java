@@ -10,8 +10,11 @@ public class Produto {
     private double rendimento;
     private String unidadeRendimento;
     private double percentualGastosIndiretos;
+    private double percentualDesperdicio;
+    private double percentualTaxaVenda;
     private double percentualLucro;
     private double custoEmbalagemUnitario;
+    private TipoArredondamento tipoArredondamento;
     private final List<ItemCusto> itensCusto;
 
     public Produto(
@@ -20,16 +23,22 @@ public class Produto {
             double rendimento,
             String unidadeRendimento,
             double percentualGastosIndiretos,
+            double percentualDesperdicio,
+            double percentualTaxaVenda,
             double percentualLucro,
-            double custoEmbalagemUnitario) {
+            double custoEmbalagemUnitario,
+            TipoArredondamento tipoArredondamento) {
         this.itensCusto = new ArrayList<>();
         setNome(nome);
         setCategoria(categoria);
         setRendimento(rendimento);
         setUnidadeRendimento(unidadeRendimento);
         setPercentualGastosIndiretos(percentualGastosIndiretos);
+        setPercentualDesperdicio(percentualDesperdicio);
+        setPercentualTaxaVenda(percentualTaxaVenda);
         setPercentualLucro(percentualLucro);
         setCustoEmbalagemUnitario(custoEmbalagemUnitario);
+        setTipoArredondamento(tipoArredondamento);
     }
 
     public String getNome() {
@@ -87,6 +96,28 @@ public class Produto {
         this.percentualGastosIndiretos = percentualGastosIndiretos;
     }
 
+    public double getPercentualDesperdicio() {
+        return percentualDesperdicio;
+    }
+
+    public void setPercentualDesperdicio(double percentualDesperdicio) {
+        if (percentualDesperdicio < 0) {
+            throw new IllegalArgumentException("Percentual de desperdicio nao pode ser negativo.");
+        }
+        this.percentualDesperdicio = percentualDesperdicio;
+    }
+
+    public double getPercentualTaxaVenda() {
+        return percentualTaxaVenda;
+    }
+
+    public void setPercentualTaxaVenda(double percentualTaxaVenda) {
+        if (percentualTaxaVenda < 0) {
+            throw new IllegalArgumentException("Percentual de taxa de venda nao pode ser negativo.");
+        }
+        this.percentualTaxaVenda = percentualTaxaVenda;
+    }
+
     public double getPercentualLucro() {
         return percentualLucro;
     }
@@ -109,6 +140,17 @@ public class Produto {
         this.custoEmbalagemUnitario = custoEmbalagemUnitario;
     }
 
+    public TipoArredondamento getTipoArredondamento() {
+        return tipoArredondamento;
+    }
+
+    public void setTipoArredondamento(TipoArredondamento tipoArredondamento) {
+        if (tipoArredondamento == null) {
+            throw new IllegalArgumentException("Tipo de arredondamento obrigatorio.");
+        }
+        this.tipoArredondamento = tipoArredondamento;
+    }
+
     public List<ItemCusto> getItensCusto() {
         return Collections.unmodifiableList(itensCusto);
     }
@@ -128,4 +170,3 @@ public class Produto {
         return !itensCusto.isEmpty();
     }
 }
-

@@ -4,6 +4,7 @@ import br.com.precify.model.CategoriaProduto;
 import br.com.precify.model.Insumo;
 import br.com.precify.model.ItemCusto;
 import br.com.precify.model.Produto;
+import br.com.precify.model.TipoArredondamento;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -42,14 +43,24 @@ public class ArquivoProdutoRepository implements ProdutoRepository {
             String tipoRegistro = partes[0];
 
             if (PREFIXO_PRODUTO.equals(tipoRegistro)) {
+                double percentualDesperdicio = partes.length > 8 ? Double.parseDouble(partes[6]) : 0.0;
+                double percentualTaxaVenda = partes.length > 8 ? Double.parseDouble(partes[7]) : 0.0;
+                double percentualLucro = partes.length > 8 ? Double.parseDouble(partes[8]) : Double.parseDouble(partes[6]);
+                double custoEmbalagem = partes.length > 8 ? Double.parseDouble(partes[9]) : Double.parseDouble(partes[7]);
+                TipoArredondamento tipoArredondamento = partes.length > 8
+                        ? TipoArredondamento.valueOf(partes[10])
+                        : TipoArredondamento.SEM_ARREDONDAMENTO;
                 produtoAtual = new Produto(
                         decodificar(partes[1]),
                         CategoriaProduto.valueOf(partes[2]),
                         Double.parseDouble(partes[3]),
                         decodificar(partes[4]),
                         Double.parseDouble(partes[5]),
-                        Double.parseDouble(partes[6]),
-                        Double.parseDouble(partes[7]));
+                        percentualDesperdicio,
+                        percentualTaxaVenda,
+                        percentualLucro,
+                        custoEmbalagem,
+                        tipoArredondamento);
                 produtos.add(produtoAtual);
                 continue;
             }
@@ -85,8 +96,11 @@ public class ArquivoProdutoRepository implements ProdutoRepository {
                     Double.toString(produto.getRendimento()),
                     codificar(produto.getUnidadeRendimento()),
                     Double.toString(produto.getPercentualGastosIndiretos()),
+                    Double.toString(produto.getPercentualDesperdicio()),
+                    Double.toString(produto.getPercentualTaxaVenda()),
                     Double.toString(produto.getPercentualLucro()),
-                    Double.toString(produto.getCustoEmbalagemUnitario())));
+                    Double.toString(produto.getCustoEmbalagemUnitario()),
+                    produto.getTipoArredondamento().name()));
 
             for (ItemCusto item : produto.getItensCusto()) {
                 linhas.add(String.join("|",
@@ -112,4 +126,3 @@ public class ArquivoProdutoRepository implements ProdutoRepository {
         return new String(Base64.getUrlDecoder().decode(valor), StandardCharsets.UTF_8);
     }
 }
-

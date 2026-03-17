@@ -4,6 +4,7 @@ import br.com.precify.model.CategoriaProduto;
 import br.com.precify.model.Insumo;
 import br.com.precify.model.ItemCusto;
 import br.com.precify.model.Produto;
+import br.com.precify.model.TipoArredondamento;
 import br.com.precify.repository.ArquivoProdutoRepository;
 import br.com.precify.repository.ProdutoRepository;
 import br.com.precify.service.CalculadoraDePreco;
@@ -117,6 +118,22 @@ public class PrecifyApp {
                 return;
             }
 
+            Double percentualDesperdicio = JOptionPaneUtils.solicitarDouble(
+                    TITULO,
+                    "Percentual de desperdicio (%):",
+                    true);
+            if (percentualDesperdicio == null) {
+                return;
+            }
+
+            Double percentualTaxaVenda = JOptionPaneUtils.solicitarDouble(
+                    TITULO,
+                    "Percentual de taxa de venda/delivery (%):",
+                    true);
+            if (percentualTaxaVenda == null) {
+                return;
+            }
+
             Double percentualLucro = JOptionPaneUtils.solicitarDouble(
                     TITULO,
                     "Percentual de lucro desejado (%):",
@@ -133,14 +150,22 @@ public class PrecifyApp {
                 return;
             }
 
+            TipoArredondamento tipoArredondamento = escolherArredondamento();
+            if (tipoArredondamento == null) {
+                return;
+            }
+
             Produto produto = new Produto(
                     nome,
                     categoria,
                     rendimento,
                     unidadeRendimento,
                     percentualGastos,
+                    percentualDesperdicio,
+                    percentualTaxaVenda,
                     percentualLucro,
-                    custoEmbalagem);
+                    custoEmbalagem,
+                    tipoArredondamento);
 
             adicionarInsumos(produto);
             produtos.add(produto);
@@ -229,13 +254,18 @@ public class PrecifyApp {
         detalhes.append("Categoria: ").append(produto.getCategoria().getDescricao()).append('\n');
         detalhes.append("Rendimento: ").append(produto.getRendimento()).append(' ')
                 .append(produto.getUnidadeRendimento()).append('\n');
+        detalhes.append("Desperdicio: ").append(produto.getPercentualDesperdicio()).append("%\n");
         detalhes.append("Gastos indiretos: ").append(produto.getPercentualGastosIndiretos()).append("%\n");
+        detalhes.append("Taxa de venda/delivery: ").append(produto.getPercentualTaxaVenda()).append("%\n");
         detalhes.append("Lucro: ").append(produto.getPercentualLucro()).append("%\n");
         detalhes.append("Embalagem por unidade: ").append(moeda.format(produto.getCustoEmbalagemUnitario())).append('\n');
+        detalhes.append("Arredondamento: ").append(produto.getTipoArredondamento().getDescricao()).append('\n');
+        detalhes.append("Subtotal base do lote: ")
+                .append(moeda.format(calculadora.calcularSubtotalBase(produto))).append('\n');
         detalhes.append("Custo de materiais do lote: ")
                 .append(moeda.format(calculadora.calcularCustoMateriais(produto))).append('\n');
-        detalhes.append("Custo total do lote: ")
-                .append(moeda.format(calculadora.calcularCustoTotalLote(produto))).append('\n');
+        detalhes.append("Custo total do lote sem arredondamento: ")
+                .append(moeda.format(calculadora.calcularCustoTotalLoteSemArredondamento(produto))).append('\n');
         detalhes.append("Preco sugerido por unidade: ")
                 .append(moeda.format(calculadora.calcularPrecoSugeridoUnitario(produto))).append("\n\n");
         detalhes.append("Insumos:\n");
@@ -276,6 +306,7 @@ public class PrecifyApp {
                         "Alterar rendimento",
                         "Alterar percentuais",
                         "Alterar embalagem",
+                        "Alterar arredondamento",
                         "Adicionar insumo",
                         "Remover insumo",
                         "Voltar"
@@ -311,9 +342,16 @@ public class PrecifyApp {
                     }
                     case "Alterar percentuais" -> {
                         Double gastos = JOptionPaneUtils.solicitarDouble(TITULO, "Novo percentual de gastos:", true);
+                        Double desperdicio = JOptionPaneUtils.solicitarDouble(TITULO, "Novo percentual de desperdicio:", true);
+                        Double taxaVenda = JOptionPaneUtils.solicitarDouble(
+                                TITULO,
+                                "Novo percentual de taxa de venda/delivery:",
+                                true);
                         Double lucro = JOptionPaneUtils.solicitarDouble(TITULO, "Novo percentual de lucro:", true);
-                        if (gastos != null && lucro != null) {
+                        if (gastos != null && desperdicio != null && taxaVenda != null && lucro != null) {
                             produto.setPercentualGastosIndiretos(gastos);
+                            produto.setPercentualDesperdicio(desperdicio);
+                            produto.setPercentualTaxaVenda(taxaVenda);
                             produto.setPercentualLucro(lucro);
                         }
                     }
@@ -324,6 +362,12 @@ public class PrecifyApp {
                                 true);
                         if (embalagem != null) {
                             produto.setCustoEmbalagemUnitario(embalagem);
+                        }
+                    }
+                    case "Alterar arredondamento" -> {
+                        TipoArredondamento tipoArredondamento = escolherArredondamento();
+                        if (tipoArredondamento != null) {
+                            produto.setTipoArredondamento(tipoArredondamento);
                         }
                     }
                     case "Adicionar insumo" -> adicionarInsumos(produto);
@@ -428,6 +472,25 @@ public class PrecifyApp {
         for (CategoriaProduto categoria : CategoriaProduto.values()) {
             if (categoria.getDescricao().equals(escolha)) {
                 return categoria;
+            }
+        }
+        return null;
+    }
+
+    private TipoArredondamento escolherArredondamento() {
+        String[] opcoes = new String[TipoArredondamento.values().length];
+        for (int i = 0; i < TipoArredondamento.values().length; i++) {
+            opcoes[i] = TipoArredondamento.values()[i].getDescricao();
+        }
+
+        String escolha = JOptionPaneUtils.escolherOpcao(TITULO, "Tipo de arredondamento comercial:", opcoes);
+        if (escolha == null) {
+            return null;
+        }
+
+        for (TipoArredondamento tipo : TipoArredondamento.values()) {
+            if (tipo.getDescricao().equals(escolha)) {
+                return tipo;
             }
         }
         return null;

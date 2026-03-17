@@ -7,8 +7,9 @@ public interface CalculadoraDePreco {
 
     double calcularCustoEmbalagemLote(Produto produto);
 
-    double calcularCustoTotalLote(Produto produto);
+    double calcularSubtotalBase(Produto produto);
+
+    double calcularCustoTotalLoteSemArredondamento(Produto produto);
 
     double calcularPrecoSugeridoUnitario(Produto produto);
 }
-

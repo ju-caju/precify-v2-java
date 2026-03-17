@@ -7,8 +7,11 @@ Versao 2.0 do Precify, reescrita em Java com foco em programacao orientada a obj
 - Cadastro de produtos e insumos
 - Calculo do preco sugerido por unidade
 - Percentual de gastos indiretos
+- Percentual de desperdicio
+- Percentual de taxa de venda/delivery
 - Percentual de lucro
 - Custo de embalagem por unidade
+- Arredondamento comercial do preco final
 - Edicao e remocao de produtos
 - Persistencia local em arquivo
 - Geracao de relatorio `.txt`
@@ -40,4 +43,3 @@ java -cp out br.com.precify.app.PrecifyApp
 ```
 
 Os dados ficam em `data/produtos.txt` e o relatorio em `data/relatorio_precify.txt`.
-

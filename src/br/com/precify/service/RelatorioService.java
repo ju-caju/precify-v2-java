@@ -35,9 +35,16 @@ public class RelatorioService {
             conteudo.append("Categoria: ").append(produto.getCategoria().getDescricao()).append('\n');
             conteudo.append("Rendimento: ").append(produto.getRendimento()).append(' ')
                     .append(produto.getUnidadeRendimento()).append('\n');
+            conteudo.append("Desperdicio: ").append(produto.getPercentualDesperdicio()).append("%\n");
             conteudo.append("Gastos indiretos: ").append(produto.getPercentualGastosIndiretos()).append("%\n");
+            conteudo.append("Taxa de venda/delivery: ").append(produto.getPercentualTaxaVenda()).append("%\n");
             conteudo.append("Lucro: ").append(produto.getPercentualLucro()).append("%\n");
             conteudo.append("Embalagem por unidade: ").append(moeda.format(produto.getCustoEmbalagemUnitario())).append('\n');
+            conteudo.append("Arredondamento: ").append(produto.getTipoArredondamento().getDescricao()).append('\n');
+            conteudo.append("Subtotal base do lote: ")
+                    .append(moeda.format(calculadoraDePreco.calcularSubtotalBase(produto))).append('\n');
+            conteudo.append("Custo total sem arredondamento: ")
+                    .append(moeda.format(calculadoraDePreco.calcularCustoTotalLoteSemArredondamento(produto))).append('\n');
             conteudo.append("Preco sugerido por unidade: ")
                     .append(moeda.format(calculadoraDePreco.calcularPrecoSugeridoUnitario(produto)))
                     .append('\n');
@@ -62,4 +69,3 @@ public class RelatorioService {
         Files.writeString(arquivo, conteudo.toString(), StandardCharsets.UTF_8);
     }
 }
-
