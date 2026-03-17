@@ -10,11 +10,13 @@ import br.com.precify.repository.ProdutoRepository;
 import br.com.precify.service.CalculadoraDePreco;
 import br.com.precify.service.CalculadoraPrecificacao;
 import br.com.precify.service.RelatorioService;
-import br.com.precify.ui.JOptionPaneUtils;
+import br.com.precify.ui.DialogService;
+import br.com.precify.ui.JOptionPaneDialogService;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import javax.swing.SwingUtilities;
@@ -27,25 +29,38 @@ public class PrecifyApp {
     private final ProdutoRepository produtoRepository;
     private final RelatorioService relatorioService;
     private final Path arquivoRelatorio;
+    private final DialogService dialogService;
     private final NumberFormat moeda = NumberFormat.getCurrencyInstance(new Locale("pt", "BR"));
 
     public PrecifyApp() {
-        Path pastaDados = Path.of(System.getProperty("user.dir"), "data");
-        this.produtoRepository = new ArquivoProdutoRepository(pastaDados.resolve("produtos.txt"));
-        this.relatorioService = new RelatorioService(calculadora);
-        this.arquivoRelatorio = pastaDados.resolve("relatorio_precify.txt");
+        this(
+                new ArquivoProdutoRepository(Path.of(System.getProperty("user.dir"), "data").resolve("produtos.txt")),
+                new RelatorioService(new CalculadoraPrecificacao()),
+                Path.of(System.getProperty("user.dir"), "data").resolve("relatorio_precify.txt"),
+                new JOptionPaneDialogService());
+    }
+
+    PrecifyApp(
+            ProdutoRepository produtoRepository,
+            RelatorioService relatorioService,
+            Path arquivoRelatorio,
+            DialogService dialogService) {
+        this.produtoRepository = produtoRepository;
+        this.relatorioService = relatorioService;
+        this.arquivoRelatorio = arquivoRelatorio;
+        this.dialogService = dialogService;
     }
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new PrecifyApp().iniciar());
     }
 
-    private void iniciar() {
+    void iniciar() {
         carregarProdutos();
 
         boolean executando = true;
         while (executando) {
-            String opcao = JOptionPaneUtils.escolherOpcao(
+            String opcao = dialogService.escolherOpcao(
                     TITULO,
                     "Escolha uma acao:",
                     new String[] {
@@ -70,11 +85,11 @@ public class PrecifyApp {
                 case "Editar produto" -> editarProduto();
                 case "Remover produto" -> removerProduto();
                 case "Gerar relatorio" -> gerarRelatorio();
-                default -> JOptionPaneUtils.mostrarErro("Opcao invalida.");
+                default -> dialogService.mostrarErro("Opcao invalida.");
             }
         }
 
-        JOptionPaneUtils.mostrarMensagem(TITULO, "Precify 2.0 encerrado.");
+        dialogService.mostrarMensagem(TITULO, "Precify 2.0 encerrado.");
     }
 
     private void carregarProdutos() {
@@ -82,13 +97,13 @@ public class PrecifyApp {
             produtos.clear();
             produtos.addAll(produtoRepository.carregar());
         } catch (IOException erro) {
-            JOptionPaneUtils.mostrarErro("Nao foi possivel carregar os produtos: " + erro.getMessage());
+            dialogService.mostrarErro("Nao foi possivel carregar os produtos: " + erro.getMessage());
         }
     }
 
     private void cadastrarProduto() {
         try {
-            String nome = JOptionPaneUtils.solicitarTexto(TITULO, "Nome do produto:");
+            String nome = dialogService.solicitarTexto(TITULO, "Nome do produto:");
             if (nome == null) {
                 return;
             }
@@ -98,19 +113,19 @@ public class PrecifyApp {
                 return;
             }
 
-            Double rendimento = JOptionPaneUtils.solicitarDouble(TITULO, "Rendimento total do lote:", false);
+            Double rendimento = dialogService.solicitarDouble(TITULO, "Rendimento total do lote:", false);
             if (rendimento == null) {
                 return;
             }
 
-            String unidadeRendimento = JOptionPaneUtils.solicitarTexto(
+            String unidadeRendimento = dialogService.solicitarTexto(
                     TITULO,
                     "Unidade do rendimento (porcoes, unidades, kg, litros):");
             if (unidadeRendimento == null) {
                 return;
             }
 
-            Double percentualGastos = JOptionPaneUtils.solicitarDouble(
+            Double percentualGastos = dialogService.solicitarDouble(
                     TITULO,
                     "Percentual de gastos indiretos (%):",
                     true);
@@ -118,7 +133,7 @@ public class PrecifyApp {
                 return;
             }
 
-            Double percentualDesperdicio = JOptionPaneUtils.solicitarDouble(
+            Double percentualDesperdicio = dialogService.solicitarDouble(
                     TITULO,
                     "Percentual de desperdicio (%):",
                     true);
@@ -126,7 +141,7 @@ public class PrecifyApp {
                 return;
             }
 
-            Double percentualTaxaVenda = JOptionPaneUtils.solicitarDouble(
+            Double percentualTaxaVenda = dialogService.solicitarDouble(
                     TITULO,
                     "Percentual de taxa de venda/delivery (%):",
                     true);
@@ -134,7 +149,7 @@ public class PrecifyApp {
                 return;
             }
 
-            Double percentualLucro = JOptionPaneUtils.solicitarDouble(
+            Double percentualLucro = dialogService.solicitarDouble(
                     TITULO,
                     "Percentual de lucro desejado (%):",
                     true);
@@ -142,7 +157,7 @@ public class PrecifyApp {
                 return;
             }
 
-            Double custoEmbalagem = JOptionPaneUtils.solicitarDouble(
+            Double custoEmbalagem = dialogService.solicitarDouble(
                     TITULO,
                     "Custo de embalagem por unidade (use 0 se nao houver):",
                     true);
@@ -171,28 +186,28 @@ public class PrecifyApp {
             produtos.add(produto);
             persistirProdutos();
 
-            JOptionPaneUtils.mostrarMensagem(
+            dialogService.mostrarMensagem(
                     TITULO,
                     "Produto cadastrado com sucesso.\nPreco sugerido por unidade: "
                             + moeda.format(calculadora.calcularPrecoSugeridoUnitario(produto)));
         } catch (IllegalArgumentException erro) {
-            JOptionPaneUtils.mostrarErro(erro.getMessage());
+            dialogService.mostrarErro(erro.getMessage());
         }
     }
 
     private void adicionarInsumos(Produto produto) {
-        while (JOptionPaneUtils.confirmar(TITULO, "Deseja adicionar um insumo ao produto?")) {
-            String nomeInsumo = JOptionPaneUtils.solicitarTexto(TITULO, "Nome do insumo:");
+        while (dialogService.confirmar(TITULO, "Deseja adicionar um insumo ao produto?")) {
+            String nomeInsumo = dialogService.solicitarTexto(TITULO, "Nome do insumo:");
             if (nomeInsumo == null) {
                 return;
             }
 
-            String unidadeInsumo = JOptionPaneUtils.solicitarTexto(TITULO, "Unidade do insumo (g, ml, un, kg):");
+            String unidadeInsumo = dialogService.solicitarTexto(TITULO, "Unidade do insumo (g, ml, un, kg):");
             if (unidadeInsumo == null) {
                 return;
             }
 
-            Double quantidadeEmbalagem = JOptionPaneUtils.solicitarDouble(
+            Double quantidadeEmbalagem = dialogService.solicitarDouble(
                     TITULO,
                     "Quantidade da embalagem do insumo:",
                     false);
@@ -200,7 +215,7 @@ public class PrecifyApp {
                 return;
             }
 
-            Double precoEmbalagem = JOptionPaneUtils.solicitarDouble(
+            Double precoEmbalagem = dialogService.solicitarDouble(
                     TITULO,
                     "Preco da embalagem do insumo:",
                     true);
@@ -208,7 +223,7 @@ public class PrecifyApp {
                 return;
             }
 
-            Double quantidadeUsada = JOptionPaneUtils.solicitarDouble(
+            Double quantidadeUsada = dialogService.solicitarDouble(
                     TITULO,
                     "Quantidade usada no lote:",
                     true);
@@ -223,7 +238,7 @@ public class PrecifyApp {
 
     private void listarProdutos() {
         if (produtos.isEmpty()) {
-            JOptionPaneUtils.mostrarMensagem(TITULO, "Nenhum produto cadastrado.");
+            dialogService.mostrarMensagem(TITULO, "Nenhum produto cadastrado.");
             return;
         }
 
@@ -240,7 +255,7 @@ public class PrecifyApp {
                     .append('\n');
         }
 
-        JOptionPaneUtils.mostrarMensagem(TITULO, resumo.toString());
+        dialogService.mostrarMensagem(TITULO, resumo.toString());
     }
 
     private void consultarDetalhes() {
@@ -286,7 +301,7 @@ public class PrecifyApp {
             }
         }
 
-        JOptionPaneUtils.mostrarMensagem(TITULO, detalhes.toString());
+        dialogService.mostrarMensagem(TITULO, detalhes.toString());
     }
 
     private void editarProduto() {
@@ -297,7 +312,7 @@ public class PrecifyApp {
 
         boolean editando = true;
         while (editando) {
-            String opcao = JOptionPaneUtils.escolherOpcao(
+            String opcao = dialogService.escolherOpcao(
                     TITULO,
                     "Editando: " + produto.getNome(),
                     new String[] {
@@ -319,7 +334,7 @@ public class PrecifyApp {
             try {
                 switch (opcao) {
                     case "Alterar nome" -> {
-                        String novoNome = JOptionPaneUtils.solicitarTexto(TITULO, "Novo nome do produto:");
+                        String novoNome = dialogService.solicitarTexto(TITULO, "Novo nome do produto:");
                         if (novoNome != null) {
                             produto.setNome(novoNome);
                         }
@@ -331,23 +346,23 @@ public class PrecifyApp {
                         }
                     }
                     case "Alterar rendimento" -> {
-                        Double rendimento = JOptionPaneUtils.solicitarDouble(TITULO, "Novo rendimento:", false);
+                        Double rendimento = dialogService.solicitarDouble(TITULO, "Novo rendimento:", false);
                         if (rendimento != null) {
                             produto.setRendimento(rendimento);
                         }
-                        String unidade = JOptionPaneUtils.solicitarTexto(TITULO, "Nova unidade de rendimento:");
+                        String unidade = dialogService.solicitarTexto(TITULO, "Nova unidade de rendimento:");
                         if (unidade != null) {
                             produto.setUnidadeRendimento(unidade);
                         }
                     }
                     case "Alterar percentuais" -> {
-                        Double gastos = JOptionPaneUtils.solicitarDouble(TITULO, "Novo percentual de gastos:", true);
-                        Double desperdicio = JOptionPaneUtils.solicitarDouble(TITULO, "Novo percentual de desperdicio:", true);
-                        Double taxaVenda = JOptionPaneUtils.solicitarDouble(
+                        Double gastos = dialogService.solicitarDouble(TITULO, "Novo percentual de gastos:", true);
+                        Double desperdicio = dialogService.solicitarDouble(TITULO, "Novo percentual de desperdicio:", true);
+                        Double taxaVenda = dialogService.solicitarDouble(
                                 TITULO,
                                 "Novo percentual de taxa de venda/delivery:",
                                 true);
-                        Double lucro = JOptionPaneUtils.solicitarDouble(TITULO, "Novo percentual de lucro:", true);
+                        Double lucro = dialogService.solicitarDouble(TITULO, "Novo percentual de lucro:", true);
                         if (gastos != null && desperdicio != null && taxaVenda != null && lucro != null) {
                             produto.setPercentualGastosIndiretos(gastos);
                             produto.setPercentualDesperdicio(desperdicio);
@@ -356,7 +371,7 @@ public class PrecifyApp {
                         }
                     }
                     case "Alterar embalagem" -> {
-                        Double embalagem = JOptionPaneUtils.solicitarDouble(
+                        Double embalagem = dialogService.solicitarDouble(
                                 TITULO,
                                 "Novo custo de embalagem por unidade:",
                                 true);
@@ -377,14 +392,14 @@ public class PrecifyApp {
 
                 persistirProdutos();
             } catch (IllegalArgumentException erro) {
-                JOptionPaneUtils.mostrarErro(erro.getMessage());
+                dialogService.mostrarErro(erro.getMessage());
             }
         }
     }
 
     private void removerInsumo(Produto produto) {
         if (!produto.possuiItens()) {
-            JOptionPaneUtils.mostrarMensagem(TITULO, "Este produto nao possui insumos.");
+            dialogService.mostrarMensagem(TITULO, "Este produto nao possui insumos.");
             return;
         }
 
@@ -392,7 +407,7 @@ public class PrecifyApp {
                 .map(item -> item.getInsumo().getNome())
                 .toArray(String[]::new);
 
-        String escolhido = JOptionPaneUtils.escolherOpcao(TITULO, "Escolha o insumo para remover:", nomes);
+        String escolhido = dialogService.escolherOpcao(TITULO, "Escolha o insumo para remover:", nomes);
         if (escolhido == null) {
             return;
         }
@@ -411,21 +426,21 @@ public class PrecifyApp {
             return;
         }
 
-        if (JOptionPaneUtils.confirmar(TITULO, "Remover o produto " + produto.getNome() + "?")) {
+        if (dialogService.confirmar(TITULO, "Remover o produto " + produto.getNome() + "?")) {
             produtos.remove(produto);
             persistirProdutos();
-            JOptionPaneUtils.mostrarMensagem(TITULO, "Produto removido.");
+            dialogService.mostrarMensagem(TITULO, "Produto removido.");
         }
     }
 
     private void gerarRelatorio() {
         try {
             relatorioService.gerar(arquivoRelatorio, produtos);
-            JOptionPaneUtils.mostrarMensagem(
+            dialogService.mostrarMensagem(
                     TITULO,
                     "Relatorio gerado com sucesso em:\n" + arquivoRelatorio);
         } catch (IOException erro) {
-            JOptionPaneUtils.mostrarErro("Falha ao gerar relatorio: " + erro.getMessage());
+            dialogService.mostrarErro("Falha ao gerar relatorio: " + erro.getMessage());
         }
     }
 
@@ -434,18 +449,18 @@ public class PrecifyApp {
             produtoRepository.salvar(produtos);
             relatorioService.gerar(arquivoRelatorio, produtos);
         } catch (IOException erro) {
-            JOptionPaneUtils.mostrarErro("Falha ao salvar dados: " + erro.getMessage());
+            dialogService.mostrarErro("Falha ao salvar dados: " + erro.getMessage());
         }
     }
 
     private Produto selecionarProduto() {
         if (produtos.isEmpty()) {
-            JOptionPaneUtils.mostrarMensagem(TITULO, "Nenhum produto cadastrado.");
+            dialogService.mostrarMensagem(TITULO, "Nenhum produto cadastrado.");
             return null;
         }
 
         String[] nomes = produtos.stream().map(Produto::getNome).toArray(String[]::new);
-        String escolhido = JOptionPaneUtils.escolherOpcao(TITULO, "Selecione um produto:", nomes);
+        String escolhido = dialogService.escolherOpcao(TITULO, "Selecione um produto:", nomes);
         if (escolhido == null) {
             return null;
         }
@@ -464,7 +479,7 @@ public class PrecifyApp {
             opcoes[i] = CategoriaProduto.values()[i].getDescricao();
         }
 
-        String escolha = JOptionPaneUtils.escolherOpcao(TITULO, "Categoria do produto:", opcoes);
+        String escolha = dialogService.escolherOpcao(TITULO, "Categoria do produto:", opcoes);
         if (escolha == null) {
             return null;
         }
@@ -483,7 +498,7 @@ public class PrecifyApp {
             opcoes[i] = TipoArredondamento.values()[i].getDescricao();
         }
 
-        String escolha = JOptionPaneUtils.escolherOpcao(TITULO, "Tipo de arredondamento comercial:", opcoes);
+        String escolha = dialogService.escolherOpcao(TITULO, "Tipo de arredondamento comercial:", opcoes);
         if (escolha == null) {
             return null;
         }
@@ -494,5 +509,9 @@ public class PrecifyApp {
             }
         }
         return null;
+    }
+
+    List<Produto> getProdutosSnapshot() {
+        return Collections.unmodifiableList(produtos);
     }
 }
